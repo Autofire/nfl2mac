@@ -16,17 +16,16 @@
 
 mod args;
 
+use std::env;
+use std::process;
+use args::Config;
 
 fn main() {
-	match args::read() {
-		Ok((infile, filetype)) => {
-			println!("{} {:?}", infile, filetype);
-
-			std::process::exit(0);
-		}
-		Err(msg) => {
-			println!("{}", msg);
-			std::process::exit(1);
-        }
-    }
+	let args: Vec<String> = env::args().collect();
+	let config = Config::new(&args).unwrap_or_else(|err| {
+		println!("{}", err);
+		process::exit(1);
+	});
+	
+	println!("{} {:?}", config.target, config.target_type);
 }

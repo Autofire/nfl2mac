@@ -13,48 +13,46 @@
 // You should have received a copy of the GNU General Public License
 // along with nfl2mac.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::env;
-
 #[derive(Debug)]
 pub enum FileType {
 	RawNFL,
 	SplitNFL,
 }
 
-/// Returns the filename
-pub fn read() -> Result<(String, FileType), String> {
-	// Argument variables
-	let mut infile: String = String::from("");
-    let mut in_file_type: Option<FileType> = None;
+pub struct Config {
+	pub target: String,
+	pub target_type: FileType,
+}
 
-	// Get arguments
-	{
-		let args: Vec<String> = env::args().collect();
-		println!("{:?}", args);
+impl Config {
+	pub fn new(args: &[String]) -> Result<Config, &'static str> {
+		// Argument variables
+		let mut target: String = String::from("");
+		let mut target_type: Option<FileType> = None;
 
 		let mut i: usize = 1;
 		while i < args.len() {
-            // TODO Handle other argument types
-			infile = args[i].clone();
-            
-            // Proceed to next arg
-            i += 1;
+			// TODO Handle other argument types
+			target = args[i].clone();
+			
+			// Proceed to next arg
+			i += 1;
 		}
+		
+		if target_type.is_none() {
+			if target.ends_with(".nfl") {
+				if target.ends_with("-split.nfl") {
+					target_type = Some(FileType::SplitNFL);
+				}
+				else {
+					target_type = Some(FileType::RawNFL);
+				}
+			}
+			else {
+				return Err("Can only process nfl files");
+			}
+		}
+		
+		Ok(Config{ target: target, target_type: target_type.unwrap()})
 	}
-    
-    if let None = in_file_type {
-        if infile.ends_with(".nfl") {
-        	if infile.ends_with("-split.nfl") {
-				in_file_type = Some(FileType::SplitNFL);
-            }
-            else {
-                in_file_type = Some(FileType::RawNFL);
-            }
-        }
-        else {
-            return Err(String::from("Can only process nfl files"));
-        }
-    }
-    
-    Result::Ok((infile, in_file_type.unwrap()))
 }
