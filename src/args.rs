@@ -15,10 +15,17 @@
 
 use std::env;
 
+#[derive(Debug)]
+pub enum FileType {
+	RawNFL,
+	SplitNFL,
+}
+
 /// Returns the filename
-pub fn read() -> Result<(String, bool), String> {
+pub fn read() -> Result<(String, FileType), String> {
 	// Argument variables
 	let mut infile: String = String::from("");
+    let mut in_file_type: Option<FileType> = None;
 
 	// Get arguments
 	{
@@ -27,10 +34,27 @@ pub fn read() -> Result<(String, bool), String> {
 
 		let mut i: usize = 1;
 		while i < args.len() {
+            // TODO Handle other argument types
 			infile = args[i].clone();
+            
+            // Proceed to next arg
             i += 1;
 		}
 	}
     
-    Result::Ok((infile, false))
+    if let None = in_file_type {
+        if infile.ends_with(".nfl") {
+        	if infile.ends_with("-split.nfl") {
+				in_file_type = Some(FileType::SplitNFL);
+            }
+            else {
+                in_file_type = Some(FileType::RawNFL);
+            }
+        }
+        else {
+            return Err(String::from("Can only process nfl files"));
+        }
+    }
+    
+    Result::Ok((infile, in_file_type.unwrap()))
 }

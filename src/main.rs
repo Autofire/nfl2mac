@@ -18,7 +18,15 @@ mod args;
 
 
 fn main() {
-    let (infile, something) = args::read().unwrap();
-    
-    println!("{} {}", infile, something);
+	match args::read() {
+		Ok((infile, filetype)) => {
+			println!("{} {:?}", infile, filetype);
+
+			std::process::exit(0);
+		}
+		Err(msg) => {
+			println!("{}", msg);
+			std::process::exit(1);
+        }
+    }
 }
