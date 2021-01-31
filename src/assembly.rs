@@ -19,7 +19,21 @@ use std::path::Path;
 
 #[derive(Debug)]
 pub struct Part {
-	pub contents: Vec<String>
+	pub level: u64,
+	pub data: Vec<String>,
+	pub lines: Vec<String>,
+	pub arcs: Vec<String>
+}
+
+impl Part {
+	pub fn new(level: u64) -> Part {
+		Part{
+			level,
+			data: Vec::new(),
+			lines: Vec::new(),
+			arcs: Vec::new()
+		}
+	}
 }
 
 #[derive(Debug)]
@@ -35,7 +49,11 @@ enum FilePart { Header, Body, Footer }
 
 impl Assembly {
 	pub fn new(infile: &str) -> Result<Assembly, &'static str> {
+
 		// TODO test file missing
+		
+		let part_begin = "LEVEL/";
+		let footer_begin = "FINI/";
 		
 		let mut result = Assembly {
 			header: Vec::new(),
@@ -50,28 +68,29 @@ impl Assembly {
 			for line in lines {
 				
 				if let Ok(ip) = line {
-					//let ip: String = ip;
+					// This is so that Eclipse understands what this is
+					let ip: String = ip;
 
 					// This always denotes a new part, whether in the header
 					// or in the body.
-					if ip.starts_with("LEVEL/") {
+					if ip.starts_with(part_begin) {
 						current_part = FilePart::Body;
 
-						// TODO
-						result.parts.push(Part{contents: vec![ip]});
+						let level: u64 = ip.strip_prefix(part_begin).unwrap().parse().unwrap_or(0);
+						result.parts.push(Part::new(level));
 					}
 					else {
 						match current_part {
 							FilePart::Header => result.header.push(ip),
 							FilePart::Footer => result.footer.push(ip),
 							FilePart::Body => {
-								if ip.eq("FINI/") {
+								if ip.eq(footer_begin) {
 									current_part = FilePart::Footer;
 									result.footer.push(ip);
 								}
 								else {
 									// TODO
-									result.parts.last_mut().unwrap().contents.push(ip);
+									result.parts.last_mut().unwrap().data.push(ip);
 								}
 							}
 							
