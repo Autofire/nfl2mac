@@ -15,10 +15,13 @@
 
 
 mod args;
+mod assembly;
 
 use std::env;
 use std::process;
+
 use args::Config;
+use assembly::Assembly;
 
 fn main() {
 	let args: Vec<String> = env::args().collect();
@@ -28,4 +31,7 @@ fn main() {
 	});
 	
 	println!("{} {:?}", config.target, config.target_type);
+	
+	let asm = Assembly::new(&config.target).unwrap();
+	println!("{:#?}", asm);
 }

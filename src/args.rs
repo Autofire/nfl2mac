@@ -13,6 +13,9 @@
 // You should have received a copy of the GNU General Public License
 // along with nfl2mac.  If not, see <https://www.gnu.org/licenses/>.
 
+// General structure yoinked from
+// https://doc.rust-lang.org/book/ch12-03-improving-error-handling-and-modularity.html
+
 #[derive(Debug)]
 pub enum FileType {
 	RawNFL,
