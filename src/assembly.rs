@@ -16,23 +16,63 @@
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Part {
 	pub level: u64,
-	pub data: Vec<String>,
+	pub data: HashMap<String, String>,
 	pub lines: Vec<String>,
 	pub arcs: Vec<String>
 }
 
 impl Part {
-	pub fn new(level: u64) -> Part {
-		Part{
+	pub fn new(level: u64, data: Vec<String>) -> Part {
+		let mut result = Part{
 			level,
-			data: Vec::new(),
+			data: HashMap::new(),
 			lines: Vec::new(),
 			arcs: Vec::new()
+		};
+		
+		let line_tag = "LINE/";
+		let circle_tag = "CIRCLE/";
+		let line_escape = '$';
+		let data_separator = '/';
+		
+		// We'll use a while loop because we sometimes need to consume
+		// multiple lines in one loop. (Lines can be broken up with '$' chars.)
+		let mut i: usize = 0;
+		while i < data.len() {
+			let mut line = data[i].clone();
+			
+			while line.ends_with(line_escape) {
+				// Remove trailing '$'
+				line = String::from(line.trim_end_matches(line_escape));
+
+				i += 1;
+				line.push_str(data[i].trim());
+			}
+			
+			if line.contains(line_tag) {
+				result.lines.push(line);
+			}
+			else if line.contains(circle_tag) {
+				result.arcs.push(line);
+			}
+			else {
+				// Making hard assumption that this is formatted right
+				let split = line.find(data_separator).unwrap();
+				result.data.insert(
+					String::from(&line[..split]),
+					String::from(&line[split+1..])
+				);
+			}
+			
+			i += 1;
 		}
+		
+		result
 	}
 }
 
@@ -65,6 +105,9 @@ impl Assembly {
 			// Consumes the iterator, returns an (Optional) String
 			let mut current_part = FilePart::Header;
 
+			let mut part_data: HashMap<u64, Vec<String>> = HashMap::new();
+			let mut level: u64 = 0;
+
 			for line in lines {
 				
 				if let Ok(ip) = line {
@@ -76,8 +119,8 @@ impl Assembly {
 					if ip.starts_with(part_begin) {
 						current_part = FilePart::Body;
 
-						let level: u64 = ip.strip_prefix(part_begin).unwrap().parse().unwrap_or(0);
-						result.parts.push(Part::new(level));
+						level = ip.strip_prefix(part_begin).unwrap().parse().unwrap_or(0);
+						//result.parts.push(Part::new(level));
 					}
 					else {
 						match current_part {
@@ -90,13 +133,18 @@ impl Assembly {
 								}
 								else {
 									// TODO
-									result.parts.last_mut().unwrap().data.push(ip);
+									//result.parts.last_mut().unwrap().data.push(ip);
+									//partData.get_mut(&level).unwrap().push(ip);
+									part_data.entry(level).or_insert(Vec::new()).push(ip);
 								}
 							}
-							
 						}
 					}
 				}
+			}
+			
+			for entry in part_data {
+				result.parts.push(Part::new(entry.0, entry.1));
 			}
 		}
 		
