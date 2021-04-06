@@ -13,68 +13,14 @@
 // You should have received a copy of the GNU General Public License
 // along with nfl2mac.  If not, see <https://www.gnu.org/licenses/>.
 
+//mod line;
+mod part;
+
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 use std::collections::HashMap;
-
-#[derive(Debug)]
-pub struct Part {
-	pub level: u64,
-	pub data: HashMap<String, String>,
-	pub lines: Vec<String>,
-	pub arcs: Vec<String>
-}
-
-impl Part {
-	pub fn new(level: u64, data: Vec<String>) -> Part {
-		let mut result = Part{
-			level,
-			data: HashMap::new(),
-			lines: Vec::new(),
-			arcs: Vec::new()
-		};
-		
-		let line_tag = "LINE/";
-		let circle_tag = "CIRCLE/";
-		let line_escape = '$';
-		let data_separator = '/';
-		
-		// We'll use a while loop because we sometimes need to consume
-		// multiple lines in one loop. (Lines can be broken up with '$' chars.)
-		let mut i: usize = 0;
-		while i < data.len() {
-			let mut line = data[i].clone();
-			
-			while line.ends_with(line_escape) {
-				// Remove trailing '$'
-				line = String::from(line.trim_end_matches(line_escape));
-
-				i += 1;
-				line.push_str(data[i].trim());
-			}
-			
-			if line.contains(line_tag) {
-				result.lines.push(line);
-			}
-			else if line.contains(circle_tag) {
-				result.arcs.push(line);
-			}
-			else {
-				// Making hard assumption that this is formatted right
-				let split = line.find(data_separator).unwrap();
-				result.data.insert(
-					String::from(&line[..split]),
-					String::from(&line[split+1..])
-				);
-			}
-			
-			i += 1;
-		}
-		
-		result
-	}
-}
+use part::Part;
 
 #[derive(Debug)]
 pub struct Assembly {
@@ -85,9 +31,14 @@ pub struct Assembly {
 }
 
 // Used when reading
-enum FilePart { Header, Body, Footer }
+enum FileSection { Header, Body, Footer }
 
 impl Assembly {
+	/// Creates a new assembly based on the given input file.
+	/// 
+	/// # Arguments
+	/// 
+	/// * infile: path to file
 	pub fn new(infile: &str) -> Result<Assembly, &'static str> {
 
 		// TODO test file missing
@@ -103,7 +54,7 @@ impl Assembly {
 		
 		if let Ok(lines) = read_lines(infile) {
 			// Consumes the iterator, returns an (Optional) String
-			let mut current_part = FilePart::Header;
+			let mut current_section = FileSection::Header;
 
 			let mut part_data: HashMap<u64, Vec<String>> = HashMap::new();
 			let mut level: u64 = 0;
@@ -117,18 +68,18 @@ impl Assembly {
 					// This always denotes a new part, whether in the header
 					// or in the body.
 					if ip.starts_with(part_begin) {
-						current_part = FilePart::Body;
+						current_section = FileSection::Body;
 
 						level = ip.strip_prefix(part_begin).unwrap().parse().unwrap_or(0);
 						//result.parts.push(Part::new(level));
 					}
 					else {
-						match current_part {
-							FilePart::Header => result.header.push(ip),
-							FilePart::Footer => result.footer.push(ip),
-							FilePart::Body => {
+						match current_section {
+							FileSection::Header => result.header.push(ip),
+							FileSection::Footer => result.footer.push(ip),
+							FileSection::Body => {
 								if ip.eq(footer_begin) {
-									current_part = FilePart::Footer;
+									current_section = FileSection::Footer;
 									result.footer.push(ip);
 								}
 								else {
