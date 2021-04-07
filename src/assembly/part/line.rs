@@ -13,8 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with nfl2mac.  If not, see <https://www.gnu.org/licenses/>.
 
-//using rusttype::Point();
-
 use regex::Regex;
 
 #[derive(Debug)]
@@ -29,15 +27,10 @@ pub struct Line {
 
 impl Line {
 	
-	pub fn new(data: String) -> Line {
+	pub fn new(data: &str) -> Line {
 		
-		//let mut result = Line{x1: 0.0, y1: 0.0, x2: 0.0, y2: 0.0};
-		let mut data = data;
-
-		let trimmers = [Regex::new(r"^.*/").unwrap()];
-		for t in trimmers.iter() {
-			data = String::from(t.replace_all(data.as_str(), ""));
-		}
+		let trimmer = Regex::new(r"^.*/").unwrap();
+		let data = String::from(trimmer.replace_all(data, ""));
 		let split = data.split(',');
 		let mut converted = split.map(|x| x.parse::<f64>().unwrap());
 		

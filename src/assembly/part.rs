@@ -13,9 +13,11 @@
 // You should have received a copy of the GNU General Public License
 // along with nfl2mac.  If not, see <https://www.gnu.org/licenses/>.
 
-mod line;
+pub mod line;
+pub mod arc;
 
 use line::Line;
+use arc::Arc;
 use std::collections::HashMap;
 //use crate::assembly::line::Line;
 //use self::line;
@@ -25,7 +27,7 @@ pub struct Part {
 	pub level: u64,
 	pub data: HashMap<String, String>,
 	pub lines: Vec<Line>,
-	pub arcs: Vec<String>
+	pub arcs: Vec<Arc>
 }
 
 impl Part {
@@ -64,10 +66,10 @@ impl Part {
 			}
 			
 			if line.contains(line_tag) {
-				result.lines.push(Line::new(line));
+				result.lines.push(Line::new(line.as_str()));
 			}
 			else if line.contains(circle_tag) {
-				result.arcs.push(line);
+				result.arcs.push(Arc::new(line.as_str()));
 			}
 			else {
 				// Making hard assumption that this is formatted right

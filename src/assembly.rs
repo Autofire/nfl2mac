@@ -14,7 +14,7 @@
 // along with nfl2mac.  If not, see <https://www.gnu.org/licenses/>.
 
 //mod line;
-mod part;
+pub mod part;
 
 use std::fs::File;
 use std::io::{self, BufRead};

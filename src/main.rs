@@ -35,5 +35,4 @@ fn main() {
 	let asm = Assembly::new(&config.target).unwrap();
 	println!("{:#?}", asm);
 
-
 }
