@@ -19,7 +19,7 @@ pub mod part;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use part::Part;
 
 const SUB_CHAR: u8 = 26;	// This is what is read if EOF is not understood
@@ -58,7 +58,10 @@ impl Assembly {
 			// Consumes the iterator, returns an (Optional) String
 			let mut current_section = FileSection::Header;
 
-			let mut part_data: HashMap<u64, Vec<String>> = HashMap::new();
+			// Was originally using HashMap, but it would mix up the order
+			// of the parts, which meant our output changed with every run.
+			// ...not great for diffs and stuff.
+			let mut part_data: BTreeMap<u64, Vec<String>> = BTreeMap::new();
 
 			for line in lines {
 				
