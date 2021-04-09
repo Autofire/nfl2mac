@@ -40,8 +40,12 @@ impl Line {
 			x2: converted.next().unwrap(),
 			y2: converted.next().unwrap()
 		}
-		
-		
+	}
+	
+	pub fn to_nfl(&self, id: u64) -> String {
+		format!("L{:0>5}=LINE/{},{},{},{}",
+			id, self.x1, self.y1, self.x2, self.y2
+		)
 	}
 	
 }

@@ -85,4 +85,28 @@ impl Part {
 		
 		result
 	}
+	
+	pub fn to_nfl(&self, id: &mut u64) -> String {
+		let mut result = String::new();
+		
+		result += &format!("LEVEL/{}\n", self.level);
+		
+		for l in &self.data {
+			result += &format!("{}/{}\n",l.0, l.1);
+		}
+		
+		for l in &self.lines {
+			result += &l.to_nfl(*id);
+			result.push('\n');
+			*id += 1;
+		}
+
+		for a in &self.arcs {
+			result += &a.to_nfl(*id);
+			result.push('\n');
+			*id += 1;
+		}
+		
+		result
+	}
 }

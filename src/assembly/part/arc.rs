@@ -15,6 +15,9 @@
 
 use regex::Regex;
 
+const DEFAULT_GO_ANGLE: f64 = 0.0;
+const DEFAULT_END_ANGLE: f64 = 360.0;
+
 #[derive(Debug)]
 pub struct Arc {
 
@@ -22,14 +25,17 @@ pub struct Arc {
 	pub x: f64,
 	pub y: f64,
 	pub radius: f64,
-	pub go_angle: f64, // default 0
-	pub end_angle: f64 // default 360
+	pub go_angle: f64,
+	pub end_angle: f64
 }
 
 impl Arc {
 
 	pub fn new(data: &str) -> Arc {
-		let mut result = Arc{x: 0.0, y: 0.0, radius: 0.0, go_angle: 0.0, end_angle: 360.0};
+		let mut result = Arc{
+			x: 0.0, y: 0.0, radius: 0.0,
+			go_angle: DEFAULT_GO_ANGLE, end_angle: DEFAULT_END_ANGLE
+		};
 
 		let trimmer = Regex::new(r"^.*/").unwrap();
 		let data = String::from(trimmer.replace_all(data, ""));
@@ -54,6 +60,23 @@ impl Arc {
 			}
 			
 			next = split.next();
+		}
+		
+		result
+	}
+
+	pub fn to_nfl(&self, id: u64) -> String {
+		let mut result = format!("C{:0>5}=CIRCLE/CENTER,{},{},RADIUS,{}",
+			id, self.x, self.y, self.radius
+		);
+		
+		
+		if self.go_angle != DEFAULT_GO_ANGLE {
+			result += &format!(",GOANG,{}", self.go_angle);
+		}
+		
+		if self.end_angle != DEFAULT_END_ANGLE {
+			result += &format!(",ENDANG,{}", self.end_angle);
 		}
 		
 		result

@@ -22,6 +22,8 @@ use std::path::Path;
 use std::collections::HashMap;
 use part::Part;
 
+const SUB_CHAR: u8 = 26;	// This is what is read if EOF is not understood
+
 #[derive(Debug)]
 pub struct Assembly {
 	pub header: Vec<String>,
@@ -31,7 +33,7 @@ pub struct Assembly {
 }
 
 // Used when reading
-enum FileSection { Header, Body, Footer }
+enum FileSection { Header, Body(u64) , Footer }
 
 impl Assembly {
 	/// Creates a new assembly based on the given input file.
@@ -57,7 +59,6 @@ impl Assembly {
 			let mut current_section = FileSection::Header;
 
 			let mut part_data: HashMap<u64, Vec<String>> = HashMap::new();
-			let mut level: u64 = 0;
 
 			for line in lines {
 				
@@ -68,25 +69,28 @@ impl Assembly {
 					// This always denotes a new part, whether in the header
 					// or in the body.
 					if ip.starts_with(part_begin) {
-						current_section = FileSection::Body;
-
-						level = ip.strip_prefix(part_begin).unwrap().parse().unwrap_or(0);
-						//result.parts.push(Part::new(level));
+						current_section = FileSection::Body(
+							ip.strip_prefix(part_begin)
+								.unwrap()
+								.parse()
+								.unwrap_or(0)
+						);
 					}
-					else {
+					else if !ip.is_empty() && ip.as_bytes()[0] != SUB_CHAR {
+						// On the line above, we check SUB_CHAR because Rust
+						// sometimes reads that at the end of the file.
+
 						match current_section {
 							FileSection::Header => result.header.push(ip),
 							FileSection::Footer => result.footer.push(ip),
-							FileSection::Body => {
+							FileSection::Body(level) => {
 								if ip.eq(footer_begin) {
 									current_section = FileSection::Footer;
 									result.footer.push(ip);
 								}
 								else {
-									// TODO
-									//result.parts.last_mut().unwrap().data.push(ip);
-									//partData.get_mut(&level).unwrap().push(ip);
-									part_data.entry(level).or_insert(Vec::new()).push(ip);
+									part_data.entry(level)
+										.or_insert(Vec::new()).push(ip);
 								}
 							}
 						}
@@ -106,21 +110,27 @@ impl Assembly {
 		let mut result: String = String::new();
 		
 		for l in &self.header {
-			result.push_str(l);
+			result += &l;
 			result.push('\n');
 		}
 
-		// TODO body
+		// Individual parts start at ID 1
+		let mut id = 1;
+		for p in &self.parts {
+			result += &p.to_nfl(&mut id);
+		}
+
 
 		for l in &self.footer {
-			// Do this because NFL files have this weird symbol at the very end,
-			// and we probably don't want to dump a newline afterward.
+			result += l;
 			result.push('\n');
-			result.push_str(l);
 		}
 
+		// Do this order because NFL files have this weird symbol at the
+		// very end, and we probably don't want to dump a newline afterward.
+		result.remove(result.len()-1);
 		
-		return result;
+		result
 	}
 }
 

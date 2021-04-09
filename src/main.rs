@@ -17,13 +17,12 @@
 mod args;
 mod assembly;
 
-use std::env;
-use std::process;
+use std::{env, process, fs, io};
 
 use args::{Config, FileType};
 use assembly::Assembly;
 
-fn main() {
+fn main() -> io::Result<()> {
 	let args: Vec<String> = env::args().collect();
 	let config = Config::new(&args).unwrap_or_else(|err| {
 		println!("{}", err);
@@ -33,13 +32,16 @@ fn main() {
 	println!("{} {:?}", config.target, config.target_type);
 	
 	let asm = Assembly::new(&config.target).unwrap();
-	println!("{:#?}", asm);
+	//println!("{:#?}", asm);
 
 	match config.target_type {
 		FileType::RawNFL => {
 			println!("Raw file... will split and store in {}", config.split_dest());	
-			println!("{}", asm.to_nfl());
+			//println!("{}", asm.to_nfl());
+			fs::write(config.split_dest(), asm.to_nfl())?;
 		},
 		FileType::SplitNFL => println!("Already split... not splitting"),
 	}
+	
+	return Ok(());
 }
