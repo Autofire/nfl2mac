@@ -20,7 +20,7 @@ mod assembly;
 use std::env;
 use std::process;
 
-use args::Config;
+use args::{Config, FileType};
 use assembly::Assembly;
 
 fn main() {
@@ -35,4 +35,11 @@ fn main() {
 	let asm = Assembly::new(&config.target).unwrap();
 	println!("{:#?}", asm);
 
+	match config.target_type {
+		FileType::RawNFL => {
+			println!("Raw file... will split and store in {}", config.split_dest());	
+			println!("{}", asm.to_nfl());
+		},
+		FileType::SplitNFL => println!("Already split... not splitting"),
+	}
 }

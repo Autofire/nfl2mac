@@ -16,6 +16,9 @@
 // General structure yoinked from
 // https://doc.rust-lang.org/book/ch12-03-improving-error-handling-and-modularity.html
 
+const NFL_EXTENSION: &str = ".nfl";
+const SPLIT_SUFFIX: &str = "-split";
+
 #[derive(Debug)]
 pub enum FileType {
 	RawNFL,
@@ -43,8 +46,8 @@ impl Config {
 		}
 		
 		if target_type.is_none() {
-			if target.ends_with(".nfl") {
-				if target.ends_with("-split.nfl") {
+			if target.ends_with(NFL_EXTENSION) {
+				if target.ends_with(format!("{}{}", SPLIT_SUFFIX, NFL_EXTENSION).as_str()) {
 					target_type = Some(FileType::SplitNFL);
 				}
 				else {
@@ -56,6 +59,14 @@ impl Config {
 			}
 		}
 		
-		Ok(Config{ target: target, target_type: target_type.unwrap()})
+		let target_type = target_type.unwrap();
+		Ok(Config{ target, target_type})
+	}
+	
+	pub fn split_dest(&self) -> String {
+		let mut result = String::from(&self.target);
+		result.insert_str(result.len() - NFL_EXTENSION.len(), SPLIT_SUFFIX);
+		
+		result
 	}
 }

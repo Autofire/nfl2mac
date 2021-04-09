@@ -101,6 +101,27 @@ impl Assembly {
 		
 		Ok(result)
 	}
+	
+	pub fn to_nfl(&self) -> String {
+		let mut result: String = String::new();
+		
+		for l in &self.header {
+			result.push_str(l);
+			result.push('\n');
+		}
+
+		// TODO body
+
+		for l in &self.footer {
+			// Do this because NFL files have this weird symbol at the very end,
+			// and we probably don't want to dump a newline afterward.
+			result.push('\n');
+			result.push_str(l);
+		}
+
+		
+		return result;
+	}
 }
 
 // Yoinked from
