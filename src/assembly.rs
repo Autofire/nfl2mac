@@ -36,6 +36,7 @@ pub struct Assembly {
 enum FileSection { Header, Body(u64) , Footer }
 
 impl Assembly {
+
 	/// Creates a new assembly based on the given input file.
 	/// 
 	/// # Arguments
@@ -109,6 +110,8 @@ impl Assembly {
 		Ok(result)
 	}
 	
+	/// Converts the assembly to an NFL string for writing.
+	/// Contains newlines, does not end in newline.
 	pub fn to_nfl(&self) -> String {
 		let mut result: String = String::new();
 		

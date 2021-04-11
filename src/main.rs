@@ -28,12 +28,12 @@ fn main() -> io::Result<()> {
 		println!("{}", err);
 		process::exit(1);
 	});
-	
+
 	println!("{} {:?}", config.target, config.target_type);
 	
 	let asm = Assembly::new(&config.target).unwrap();
 	//println!("{:#?}", asm);
-
+    
 	match config.target_type {
 		FileType::RawNFL => {
 			println!("Raw file... will split and store in {}", config.split_dest());	
