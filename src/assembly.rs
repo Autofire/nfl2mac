@@ -110,6 +110,19 @@ impl Assembly {
 		Ok(result)
 	}
 	
+    pub fn split(&mut self) {
+        for i in 0..self.parts.len() {
+            for j in (i+1)..self.parts.len() {
+                // This is a weird workaround... basically, forcing Rust
+                // to allow us to pass in both indicies mutably.
+                let (a, b) = self.parts.split_at_mut(j);
+
+                Part::resolve_overlaps(&mut a[i], &mut b[0]);
+            }
+        }
+        
+    }
+
 	/// Converts the assembly to an NFL string for writing.
 	/// Contains newlines, does not end in newline.
 	pub fn to_nfl(&self) -> String {

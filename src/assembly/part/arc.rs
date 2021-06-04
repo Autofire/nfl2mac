@@ -14,6 +14,7 @@
 // along with nfl2mac.  If not, see <https://www.gnu.org/licenses/>.
 
 use regex::Regex;
+use euclid::Point2D;
 
 const DEFAULT_GO_ANGLE: f64 = 0.0;
 const DEFAULT_END_ANGLE: f64 = 360.0;
@@ -22,8 +23,11 @@ const DEFAULT_END_ANGLE: f64 = 360.0;
 pub struct Arc {
 
 	// "C00023=CIRCLE/CENTER,0.8045921410692,1.9847924952923,RADIUS,0.4838867345605,GOANG,90.140087201328,ENDANG,256.45889291795"
+    /*
 	pub x: f64,
 	pub y: f64,
+    */
+    pub center: Point2D<f64, f64>,
 	pub radius: f64,
 	pub go_angle: f64,
 	pub end_angle: f64
@@ -33,7 +37,7 @@ impl Arc {
 
 	pub fn new(data: &str) -> Arc {
 		let mut result = Arc{
-			x: 0.0, y: 0.0, radius: 0.0,
+			center: Point2D::new(0.0, 0.0), radius: 0.0,
 			go_angle: DEFAULT_GO_ANGLE, end_angle: DEFAULT_END_ANGLE
 		};
 
@@ -46,8 +50,8 @@ impl Arc {
 			let s = next.unwrap();
 			
 			if s == "CENTER" {
-				result.x = split.next().unwrap().parse::<f64>().unwrap();
-				result.y = split.next().unwrap().parse::<f64>().unwrap();
+				result.center.x = split.next().unwrap().parse::<f64>().unwrap();
+				result.center.y = split.next().unwrap().parse::<f64>().unwrap();
 			}
 			else if s == "RADIUS" {
 				result.radius = split.next().unwrap().parse::<f64>().unwrap();
@@ -67,7 +71,7 @@ impl Arc {
 
 	pub fn to_nfl(&self, id: u64) -> String {
 		let mut result = format!("C{:0>5}=CIRCLE/CENTER,{},{},RADIUS,{}",
-			id, self.x, self.y, self.radius
+			id, self.center.x, self.center.y, self.radius
 		);
 		
 		

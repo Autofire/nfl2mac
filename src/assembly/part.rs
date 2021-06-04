@@ -19,6 +19,7 @@ pub mod arc;
 use line::Line;
 use arc::Arc;
 use std::collections::HashMap;
+use euclid::Point2D;
 //use crate::assembly::line::Line;
 //use self::line;
 
@@ -85,7 +86,45 @@ impl Part {
 		
 		result
 	}
-	
+
+    pub fn resolve_overlaps(a: &mut Part, b: &mut Part) {
+        println!("Resolving parts {} and {}", a.level, b.level);
+
+        // So the problem is that we need to replace lines... but we
+        // cannot just add lines while we're looping through!
+        // 
+        // Instead, no splits will occur until we're done finding points
+        // to split at. Once we do that, we'll go through this list of
+        // points-to-split-at and perform them.
+        // 
+        // This way, if we need to perform multiple splits, it will be more
+        // straightforward in the end.
+        // 
+        // When splits occur, we want to create points at average positions
+        // between the overlapping areas. The new segments will share endpoints
+        // between parts.
+        // 
+        // Note that we CANNOT destroy the endpoint!
+        let _a_splits: HashMap<usize, Vec<Point2D<f64, f64>>> = HashMap::new();
+        let _b_splits: HashMap<usize, Vec<Point2D<f64, f64>>> = HashMap::new();
+
+        for i in 0..a.lines.len() {
+            for j in 0..b.lines.len() {
+                
+                if let Some(overlaps)
+                    = Line::find_overlaps(&a.lines[i], &b.lines[j], 0.01)
+                {
+                    println!("a:  {:?}", a);
+                    println!("b:  {:?}", b);
+                    println!("o0: {:?}", overlaps.0);
+                    println!("o1: {:?}", overlaps.1);
+                    println!();
+                }
+                
+            }
+        }
+    }
+
 	pub fn to_nfl(&self, id: &mut u64) -> String {
 		let mut result = String::new();
 		
