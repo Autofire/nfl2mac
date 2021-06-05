@@ -18,7 +18,7 @@ pub mod part;
 
 use std::fs::File;
 use std::io::{self, BufRead};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
 use part::Part;
 
@@ -42,7 +42,7 @@ impl Assembly {
 	/// # Arguments
 	/// 
 	/// * infile: path to file
-	pub fn new(infile: &str) -> Result<Assembly, &'static str> {
+	pub fn new(infile: &PathBuf) -> Result<Assembly, &'static str> {
 
 		// TODO test file missing
 		

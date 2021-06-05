@@ -82,11 +82,11 @@ impl Line {
 
         let a_len_sqr = a_len * a_len;
         // TODO create lambda
-        let b1_inside =
+        let _b1_inside =
             (b.p1 - a.p1).square_length() < a_len_sqr &&
             (b.p1 - a.p2).square_length() < a_len_sqr;
 
-        let b2_inside =
+        let _b2_inside =
             (b.p2 - a.p1).square_length() < a_len_sqr &&
             (b.p2 - a.p2).square_length() < a_len_sqr;
         

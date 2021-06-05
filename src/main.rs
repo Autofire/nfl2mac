@@ -13,36 +13,62 @@
 // You should have received a copy of the GNU General Public License
 // along with nfl2mac.  If not, see <https://www.gnu.org/licenses/>.
 
-
 mod args;
 mod assembly;
 
-use std::{env, process, fs, io};
-
-use args::{Config, FileType};
 use assembly::Assembly;
+use args::{Config, FileType}; // TODO remove
+
+use std::{fs, io, cmp::min};
+use log::{info, debug};
+use flexi_logger::Logger;
+
 
 fn main() -> io::Result<()> {
+
+    //let mut opt = Opt::from_args();
+    let conf = Config::new().unwrap(); // TODO Error message
+    println!("{:?}", conf);
+
+    let log_levels = ["error", "warn", "info", "debug", "trace"];
+    let log_level = log_levels[min(conf.verbose, log_levels.len()-1)];
+
+    //println!("verbose: {}", opt.verbose);
+    if !conf.quiet {
+        Logger::with_env_or_str(log_level).start().unwrap();
+    }
+
+    /*
+
 	let args: Vec<String> = env::args().collect();
 	let config = Config::new(&args).unwrap_or_else(|err| {
 		println!("{}", err);
 		process::exit(1);
 	});
+    */
 
-	println!("{} {:?}", config.target, config.target_type);
+
+	//println!("{} {:?}", conf.target, conf.target_type);
 	
-	let mut asm = Assembly::new(&config.target).unwrap();
+	let mut asm = Assembly::new(&conf.target).unwrap();
+    debug!("File contents:\n{}", asm.to_nfl());
+
+	match conf.target_type.clone().expect("Failed to deduce input type") {
+		FileType::RawNFL => {
+			info!("Raw file... will split and store in {:?}", conf.split_dest());	
+            asm.split();
+            debug!("After split:\n{}", asm.to_nfl());
+			fs::write(conf.split_dest(), asm.to_nfl())?;
+		},
+        
+		FileType::SplitNFL => {
+            println!("Already split... not splitting");
+        },
+	}
 	//println!("{:#?}", asm);
     
-	match config.target_type {
-		FileType::RawNFL => {
-			println!("Raw file... will split and store in {}", config.split_dest());	
-			//println!("{}", asm.to_nfl());
-            asm.split();
-			fs::write(config.split_dest(), asm.to_nfl())?;
-		},
-		FileType::SplitNFL => println!("Already split... not splitting"),
-	}
+    /*
+    */
 	
 	return Ok(());
 }
