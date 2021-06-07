@@ -17,58 +17,46 @@ mod args;
 mod assembly;
 
 use assembly::Assembly;
-use args::{Config, FileType}; // TODO remove
+use args::{Config, FileType};
 
-use std::{fs, io, cmp::min};
+use std::{fs, error::Error, cmp::min};
 use log::{info, debug};
 use flexi_logger::Logger;
 
 
-fn main() -> io::Result<()> {
+fn main() -> Result<(), Box<dyn Error>> {
 
     //let mut opt = Opt::from_args();
-    let conf = Config::new().unwrap(); // TODO Error message
-    println!("{:?}", conf);
+    let conf = Config::new()?;
+
 
     let log_levels = ["error", "warn", "info", "debug", "trace"];
     let log_level = log_levels[min(conf.verbose, log_levels.len()-1)];
 
-    //println!("verbose: {}", opt.verbose);
     if !conf.quiet {
-        Logger::with_env_or_str(log_level).start().unwrap();
+        Logger::with_env_or_str(log_level)
+            .set_palette(String::from("196;208;-;7;108"))
+            .start()
+            .unwrap();
     }
 
-    /*
-
-	let args: Vec<String> = env::args().collect();
-	let config = Config::new(&args).unwrap_or_else(|err| {
-		println!("{}", err);
-		process::exit(1);
-	});
-    */
-
-
-	//println!("{} {:?}", conf.target, conf.target_type);
-	
-	let mut asm = Assembly::new(&conf.target).unwrap();
+    debug!("{:?}", conf);
+    
+    let mut asm = Assembly::new(&conf.target).unwrap();
     debug!("File contents:\n{}", asm.to_nfl());
 
-	match conf.target_type.clone().expect("Failed to deduce input type") {
-		FileType::RawNFL => {
-			info!("Raw file... will split and store in {:?}", conf.split_dest());	
+    match conf.target_type.clone().expect("Failed to deduce input type") {
+        FileType::RawNFL => {
+            info!("Raw file... will split and store in {:?}", conf.split_dest());	
             asm.split();
             debug!("After split:\n{}", asm.to_nfl());
-			fs::write(conf.split_dest(), asm.to_nfl())?;
-		},
+            fs::write(conf.split_dest(), asm.to_nfl())?;
+        },
         
-		FileType::SplitNFL => {
+        FileType::SplitNFL => {
             println!("Already split... not splitting");
         },
-	}
-	//println!("{:#?}", asm);
+    }
     
-    /*
-    */
-	
-	return Ok(());
+    Ok(())
 }

@@ -14,20 +14,23 @@
 // along with nfl2mac.  If not, see <https://www.gnu.org/licenses/>.
 
 use regex::Regex;
+use std::fmt;
+use std::rc::Rc;
+use std::cell::RefCell;
+use std::ops::{Index, IndexMut};
+use log::*;
 use euclid::{Point2D, Vector2D};
 
 #[derive(Debug)]
 pub struct Line {
 
 	// "Lnnnnn=LINE/x1,y1,x2,y2",
-    /*
-	pub x1: f64,
-	pub y1: f64,
-	pub x2: f64,
-	pub y2: f64
-    */
-    pub p1: Point2D<f64, f64>,
-    pub p2: Point2D<f64, f64>
+    //
+    // These are RefCells because lines can share points.
+    // Nesting it like this allows us to modify the points
+    // and then have thise changes propogate to other lines.
+    p1: Rc<RefCell<Point2D<f64, f64>>>,
+    p2: Rc<RefCell<Point2D<f64, f64>>>
 }
 
 impl Line {
@@ -40,16 +43,32 @@ impl Line {
 		let mut converted = split.map(|x| x.parse::<f64>().unwrap());
 		
         Line{
-            p1: Point2D::new(converted.next().unwrap(), converted.next().unwrap()),
-            p2: Point2D::new(converted.next().unwrap(), converted.next().unwrap())
+            p1: Rc::new(RefCell::new(Point2D::new(converted.next().unwrap(), converted.next().unwrap()))),
+            p2: Rc::new(RefCell::new(Point2D::new(converted.next().unwrap(), converted.next().unwrap())))
         }
 	}
+
+    pub fn merge_points(a: &mut Line, b: &mut Line, max_dist: f64) {
+
+        trace!("Attempting merge of {} and {}", a, b);
+
+        for i in 0..1 {
+            for j in 0..1 {
+                trace!("Checking {:?} and {:?}", a[i], b[i]);
+                if a[i].borrow().distance_to(*b[j].borrow()) <= max_dist {
+                    debug!("Merging {:?} and {:?}", a[i], b[i]);
+                    a[i] = b[j].clone();
+                }
+            }
+        }
+    }
 
     /// If a and b overlap, gets the start and end points of the
     /// overlapping segment. If they do not overlap, None is returned.
     pub fn find_overlaps(a: &Line, b: &Line, max_dist: f64)
         -> Option<(Point2D<f64, f64>, Point2D<f64, f64>)> 
     {
+        /*
         // Rather than compute slopes, we're just going to check the distance
         // of the endpoints to the lines.
         let a_vec = a.to_vector();
@@ -89,6 +108,7 @@ impl Line {
         let _b2_inside =
             (b.p2 - a.p1).square_length() < a_len_sqr &&
             (b.p2 - a.p2).square_length() < a_len_sqr;
+            */
         
         None
     }
@@ -99,7 +119,7 @@ impl Line {
     /// This ensures that the y value is always positive. (i.e. if vector was
     /// placed at the origin, the end point would always be above the x axis.)
     pub fn to_vector(&self) -> Vector2D<f64, f64> {
-        let diff = self.p1 - self.p2;
+        let diff = *self.p1.borrow() - *self.p2.borrow();
 
         if diff.y < 0.0 {
             diff * -1.0
@@ -110,9 +130,42 @@ impl Line {
     }
 
 	pub fn to_nfl(&self, id: u64) -> String {
+        let p1 = *(self.p1).borrow();
+        let p2 = *(self.p2).borrow();
+
 		format!("L{:0>5}=LINE/{},{},{},{}",
-			id, self.p1.x, self.p1.y, self.p2.x, self.p2.y
+			id, p1.x, p1.y, p2.x, p2.y
 		)
 	}
 	
+}
+
+impl Index<usize> for Line {
+    type Output = Rc<RefCell<Point2D<f64,f64>>>;
+
+    fn index(&self, i: usize) -> &Self::Output {
+        match i {
+            0 => &self.p1,
+            1 => &self.p2,
+            _ => panic!("Index out of bounds: {}", i)
+        }
+    }
+}
+
+impl IndexMut<usize> for Line {
+    fn index_mut(&mut self, i: usize) -> &mut Self::Output {
+        match i {
+            0 => &mut self.p1,
+            1 => &mut self.p2,
+            _ => panic!("Index out of bounds: {}", i)
+        }
+    }
+}
+
+impl fmt::Display for Line {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let p1 = *(self.p1).borrow();
+        let p2 = *(self.p2).borrow();
+        write!(f, "<({}, {}), ({}, {})>", p1.x, p1.y, p2.x, p2.y)
+    }
 }

@@ -20,6 +20,7 @@ use line::Line;
 use arc::Arc;
 use std::collections::HashMap;
 use euclid::Point2D;
+use log::*;
 //use crate::assembly::line::Line;
 //use self::line;
 
@@ -47,6 +48,8 @@ impl Part {
 			arcs: Vec::new()
 		};
 		
+        debug!("Processing part {}", result.level);
+
 		let line_tag = "LINE/";
 		let circle_tag = "CIRCLE/";
 		let line_escape = '$';
@@ -83,12 +86,24 @@ impl Part {
 			
 			i += 1;
 		}
-		
+
+        // Next, we'll want to merge all line points that overlap.
+        for i in 0..result.lines.len() {
+            let (head, tail) = result.lines.split_at_mut(i+1);
+            let l1 = &mut head[head.len()-1];
+            for l2 in tail {
+                // TODO Get this value from config
+                Line::merge_points(l1, l2, 0.001);
+            }
+        }
+
+        debug!("Finished part {}", result.level);
+
 		result
 	}
 
     pub fn resolve_overlaps(a: &mut Part, b: &mut Part) {
-        println!("Resolving parts {} and {}", a.level, b.level);
+        info!("Resolving parts {} and {}", a.level, b.level);
 
         // So the problem is that we need to replace lines... but we
         // cannot just add lines while we're looping through!
@@ -114,11 +129,11 @@ impl Part {
                 if let Some(overlaps)
                     = Line::find_overlaps(&a.lines[i], &b.lines[j], 0.01)
                 {
-                    println!("a:  {:?}", a);
-                    println!("b:  {:?}", b);
-                    println!("o0: {:?}", overlaps.0);
-                    println!("o1: {:?}", overlaps.1);
-                    println!();
+                    info!("a:  {:?}", a);
+                    info!("b:  {:?}", b);
+                    info!("o0: {:?}", overlaps.0);
+                    info!("o1: {:?}", overlaps.1);
+                    info!("");
                 }
                 
             }
