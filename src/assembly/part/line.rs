@@ -53,11 +53,11 @@ impl Line {
     pub fn find_overlaps(a: &Line, b: &Line, max_dist: f64)
         -> Option<(Point2D<f64, f64>, Point2D<f64, f64>)> 
     {
-        let mut contained: Vec<Point2D<f64, f64>> = Vec::new();
+        let mut overlaps: Vec<Point2D<f64, f64>> = Vec::new();
 
         let mut append_if_contained = |l: &Line, p: &Point2D<f64,f64>| {
-            if l.contains(p, max_dist) {
-                contained.push(p.clone());
+            if l.overlaps(p, max_dist) {
+                overlaps.push(p.clone());
             }
         };
 
@@ -69,21 +69,21 @@ impl Line {
 
         // If we see three overlaps, then the lines share at least one point.
         // If we see four, the lines perfectly match and nothing more must be done.
-        if contained.len() == 2 {
-            // Exactly two points are contained; they must be the endpoints
-            Some((contained[0], contained[1]))
+        if overlaps.len() == 2 {
+            // Exactly two points are overlaps; they must be the endpoints
+            Some((overlaps[0], overlaps[1]))
         }
-        else if contained.len() == 3 {
+        else if overlaps.len() == 3 {
             // Exactly one point is shared. We only need to do one check:
             // if the first two are VERY close, then we ignore one of 'em.
             // Otherwise, the third one is very close to either one of the
             // two. We don't care which one, we just can ignore it.
 
-            if (contained[0]-contained[1]).square_length() <= max_dist * max_dist {
-                Some((contained[1], contained[2]))
+            if (overlaps[0]-overlaps[1]).square_length() <= max_dist * max_dist {
+                Some((overlaps[1], overlaps[2]))
             }
             else {
-                Some((contained[0], contained[1]))
+                Some((overlaps[0], overlaps[1]))
             }
         }
         else {
@@ -94,8 +94,9 @@ impl Line {
         }
     }
 
-    pub fn contains(&self, point: &Point2D<f64, f64>, max_dist: f64) -> bool {
-        
+    /// Checks if a line overlaps the given point, including the line's endpoints.
+    pub fn overlaps(&self, point: &Point2D<f64, f64>, max_dist: f64) -> bool {
+
         // TODO See about caching. We call this function a bunch of times!
 
         let v = self.to_vector();
@@ -117,6 +118,16 @@ impl Line {
                 (*point - self.p1).square_length() < l*l &&
                 (*point - self.p2).square_length() < l*l;
         }
+    }
+
+    /// Checks if a line contains the given point, excluding the line's endpoints.
+    pub fn contains(&self, point: &Point2D<f64, f64>, max_dist: f64) -> bool {
+
+        let dist_sqr = max_dist * max_dist;
+        
+        self.overlaps(point, max_dist) &&
+                (*point - self.p1).square_length() > dist_sqr &&
+                (*point - self.p2).square_length() > dist_sqr
         
     }
 
@@ -195,13 +206,25 @@ mod tests {
     fn contains() {
 		let l = Line::new(0., 0., 2., 2.);
 
-        assert!(l.contains(&Point2D::new(0., 0.), 0.00001));
+        assert!(!l.contains(&Point2D::new(0., 0.), 0.00001));
         assert!(l.contains(&Point2D::new(1., 1.), 0.00001));
-        assert!(l.contains(&Point2D::new(2., 2.), 0.00001));
+        assert!(l.contains(&Point2D::new(0.5, 0.5), 0.00001));
+        assert!(!l.contains(&Point2D::new(2., 2.), 0.00001));
 
         assert!(!l.contains(&Point2D::new(0., 2.), 0.00001));
         assert!(!l.contains(&Point2D::new(2., 0.), 0.00001));
-        assert!(l.contains(&Point2D::new(0., 2.), 1.5));
+    }
 
+    #[test]
+    fn overlaps() {
+		let l = Line::new(0., 0., 2., 2.);
+
+        assert!(l.overlaps(&Point2D::new(0., 0.), 0.00001));
+        assert!(l.overlaps(&Point2D::new(1., 1.), 0.00001));
+        assert!(l.overlaps(&Point2D::new(2., 2.), 0.00001));
+
+        assert!(!l.overlaps(&Point2D::new(0., 2.), 0.00001));
+        assert!(!l.overlaps(&Point2D::new(2., 0.), 0.00001));
+        assert!(l.overlaps(&Point2D::new(0., 2.), 1.5));
     }
 }

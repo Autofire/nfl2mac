@@ -38,14 +38,6 @@ impl Part {
 	/// line should be separate, as it was in the file.
 	pub fn new(level: u64, data: Vec<String>) -> Part {
 
-        /*
-		let test = Line::new(String::from("L00017=LINE/1,1,2,2,").as_str());
-        println!("{}", test.contains(&Point2D::new(10.0, 10.0), 0.0001));
-        println!("{}", test.contains(&Point2D::new(10.0, 9.0), 0.0001));
-        println!("{}", test.contains(&Point2D::new(2.1, 2.1), 0.0001));
-        */
-		//println!("{:?}", test_line);
-		
 		let mut result = Part{
 			level,
 			data: HashMap::new(),
@@ -118,8 +110,21 @@ impl Part {
         //        zero; things will just be relaly close and that should be good?
         // 
         // Note that we CANNOT destroy the endpoint!
-        let _a_splits: HashMap<usize, Vec<Point2D<f64, f64>>> = HashMap::new();
-        let _b_splits: HashMap<usize, Vec<Point2D<f64, f64>>> = HashMap::new();
+        
+        // These maps are arranged such that the key is the index to the line,
+        // while the points are all the places that those lines must be split.
+        let mut a_splits: HashMap<usize, Vec<Point2D<f64, f64>>> = HashMap::new();
+        let mut b_splits: HashMap<usize, Vec<Point2D<f64, f64>>> = HashMap::new();
+
+        let add_split = |m: &mut HashMap<usize, Vec<_>>, key, points: &(_,_)|
+        {
+            if !m.contains_key(&key) {
+                m.insert(key, Vec::new());
+            }
+
+            m.get_mut(&key).unwrap().push(points.0);
+            m.get_mut(&key).unwrap().push(points.1);
+        };
 
         for i in 0..a.lines.len() {
             for j in 0..b.lines.len() {
@@ -127,14 +132,29 @@ impl Part {
                 if let Some(overlaps)
                     = Line::find_overlaps(&a.lines[i], &b.lines[j], max_dist)
                 {
-                    //info!("a:  {:?}", a);
-                    //info!("b:  {:?}", b);
                     trace!("Found overlap in lines:\n{}\n{}\no: {:?}",
                            a.lines[i], b.lines[j], overlaps);
+
+                    add_split(&mut a_splits, i, &overlaps);
+                    add_split(&mut b_splits, j, &overlaps);
                 }
                 
             }
         }
+
+
+        let perform_splits = |lines: &mut Vec<Line>, splits: &mut HashMap<usize, Vec<Point2D<f64,f64>>>| {
+            for (i, points) in splits {
+                for point in points {
+                    if lines[*i].contains(point, max_dist) {
+                        trace!("Splitting\n{}\nat {:?}", lines[*i], point);
+                    }
+                }
+            }
+        };
+
+        perform_splits(&mut a.lines, &mut a_splits);
+        perform_splits(&mut b.lines, &mut b_splits);
     }
 
 	pub fn to_nfl(&self, id: &mut u64) -> String {
