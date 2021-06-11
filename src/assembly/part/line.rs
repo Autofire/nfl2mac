@@ -15,102 +15,109 @@
 
 use regex::Regex;
 use std::fmt;
-use std::rc::Rc;
-use std::cell::RefCell;
 use std::ops::{Index, IndexMut};
-use log::*;
+//use log::*;
 use euclid::{Point2D, Vector2D};
 
 #[derive(Debug)]
 pub struct Line {
 
 	// "Lnnnnn=LINE/x1,y1,x2,y2",
-    //
-    // These are RefCells because lines can share points.
-    // Nesting it like this allows us to modify the points
-    // and then have thise changes propogate to other lines.
-    p1: Rc<RefCell<Point2D<f64, f64>>>,
-    p2: Rc<RefCell<Point2D<f64, f64>>>
+    p1: Point2D<f64, f64>,
+    p2: Point2D<f64, f64>
 }
 
 impl Line {
 	
-	pub fn new(data: &str) -> Line {
+    pub fn new(x1: f64, y1: f64, x2: f64, y2: f64) -> Line {
+        Line{ p1: Point2D::new(x1, y1), p2: Point2D::new(x2, y2) }
+    }
+
+	pub fn from_nfl(data: &str) -> Line {
 		
 		let trimmer = Regex::new(r"^.*/").unwrap();
 		let data = String::from(trimmer.replace_all(data, ""));
 		let split = data.split(',');
 		let mut converted = split.map(|x| x.parse::<f64>().unwrap());
 		
-        Line{
-            p1: Rc::new(RefCell::new(Point2D::new(converted.next().unwrap(), converted.next().unwrap()))),
-            p2: Rc::new(RefCell::new(Point2D::new(converted.next().unwrap(), converted.next().unwrap())))
-        }
+        Line::new(
+            converted.next().unwrap(), converted.next().unwrap(),
+            converted.next().unwrap(), converted.next().unwrap()
+        )
 	}
-
-    pub fn merge_points(a: &mut Line, b: &mut Line, max_dist: f64) {
-
-        trace!("Attempting merge of {} and {}", a, b);
-
-        for i in 0..1 {
-            for j in 0..1 {
-                trace!("Checking {:?} and {:?}", a[i], b[i]);
-                if a[i].borrow().distance_to(*b[j].borrow()) <= max_dist {
-                    debug!("Merging {:?} and {:?}", a[i], b[i]);
-                    a[i] = b[j].clone();
-                }
-            }
-        }
-    }
 
     /// If a and b overlap, gets the start and end points of the
     /// overlapping segment. If they do not overlap, None is returned.
+    ///
+    /// Note that, if the lines perfectly match, None is ALSO returned!
     pub fn find_overlaps(a: &Line, b: &Line, max_dist: f64)
         -> Option<(Point2D<f64, f64>, Point2D<f64, f64>)> 
     {
-        /*
-        // Rather than compute slopes, we're just going to check the distance
-        // of the endpoints to the lines.
-        let a_vec = a.to_vector();
-        let a_len = a_vec.length();
+        let mut contained: Vec<Point2D<f64, f64>> = Vec::new();
+
+        let mut append_if_contained = |l: &Line, p: &Point2D<f64,f64>| {
+            if l.contains(p, max_dist) {
+                contained.push(p.clone());
+            }
+        };
+
+        // We'll figure out which points are contained in the lines.
+        append_if_contained(&a, &b.p1);
+        append_if_contained(&a, &b.p2);
+        append_if_contained(&b, &a.p1);
+        append_if_contained(&b, &a.p2);
+
+        // If we see three overlaps, then the lines share at least one point.
+        // If we see four, the lines perfectly match and nothing more must be done.
+        if contained.len() == 2 {
+            // Exactly two points are contained; they must be the endpoints
+            Some((contained[0], contained[1]))
+        }
+        else if contained.len() == 3 {
+            // Exactly one point is shared. We only need to do one check:
+            // if the first two are VERY close, then we ignore one of 'em.
+            // Otherwise, the third one is very close to either one of the
+            // two. We don't care which one, we just can ignore it.
+
+            if (contained[0]-contained[1]).square_length() <= max_dist * max_dist {
+                Some((contained[1], contained[2]))
+            }
+            else {
+                Some((contained[0], contained[1]))
+            }
+        }
+        else {
+            // Either lines perfectly match (four points) or something else is
+            // arwy (lines are skew, etc.) Whatever the case, nothing needs to
+            // be done here.
+            None
+        }
+    }
+
+    pub fn contains(&self, point: &Point2D<f64, f64>, max_dist: f64) -> bool {
+        
+        // TODO See about caching. We call this function a bunch of times!
+
+        let v = self.to_vector();
+        let l = v.length();
 
         // D = ||L x p0p1||/||L|| = ||a1a2 x a1b1||/||a1a2||
-        let d1 = a_vec.cross(a.p1 - b.p1) / a_len;
-        if d1 > max_dist {
-            return None;
+        let d = v.cross(self.p1 - *point) / l;
+        if d.abs() > max_dist {
+            return false;
         }
-
-        let d2 = a_vec.cross(a.p1 - b.p2) / a_len;
-        if d2 > max_dist {
-            return None;
+        else {
+            // Alright, we've established that this point is on the (infinite)
+            // line described by our endpoints.
+            //
+            // Now this distance from our desired point to BOTH endpoints must
+            // be less than the distance between the endpoints themselves.
+            // Only THEN can our point be on the line!
+            return
+                (*point - self.p1).square_length() < l*l &&
+                (*point - self.p2).square_length() < l*l;
         }
-
-        // If we've gotten this far, we know that b's endpoints are quite
-        // close to the line described by a's endpoints.
-        //
-        // This means one of these things are possible:
-        //  1.) One of b's points are contained in a
-        //  2.) b is contained in a
-        //  3.) a is contained in b
-        //  4.) There is no overlap
-        //
-        // Since we've established that b's points are close to the line,
-        // we'll check (square) distances. We know the point is inside segment
-        // a if the distance between it and each of a's endpoints is under the
-        // distance between the endpoints themselves.
-
-        let a_len_sqr = a_len * a_len;
-        // TODO create lambda
-        let _b1_inside =
-            (b.p1 - a.p1).square_length() < a_len_sqr &&
-            (b.p1 - a.p2).square_length() < a_len_sqr;
-
-        let _b2_inside =
-            (b.p2 - a.p1).square_length() < a_len_sqr &&
-            (b.p2 - a.p2).square_length() < a_len_sqr;
-            */
         
-        None
     }
 
 
@@ -119,7 +126,7 @@ impl Line {
     /// This ensures that the y value is always positive. (i.e. if vector was
     /// placed at the origin, the end point would always be above the x axis.)
     pub fn to_vector(&self) -> Vector2D<f64, f64> {
-        let diff = *self.p1.borrow() - *self.p2.borrow();
+        let diff = self.p1 - self.p2;
 
         if diff.y < 0.0 {
             diff * -1.0
@@ -130,8 +137,8 @@ impl Line {
     }
 
 	pub fn to_nfl(&self, id: u64) -> String {
-        let p1 = *(self.p1).borrow();
-        let p2 = *(self.p2).borrow();
+        let p1 = &self.p1;
+        let p2 = &self.p2;
 
 		format!("L{:0>5}=LINE/{},{},{},{}",
 			id, p1.x, p1.y, p2.x, p2.y
@@ -141,7 +148,7 @@ impl Line {
 }
 
 impl Index<usize> for Line {
-    type Output = Rc<RefCell<Point2D<f64,f64>>>;
+    type Output = Point2D<f64,f64>;
 
     fn index(&self, i: usize) -> &Self::Output {
         match i {
@@ -164,8 +171,37 @@ impl IndexMut<usize> for Line {
 
 impl fmt::Display for Line {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let p1 = *(self.p1).borrow();
-        let p2 = *(self.p2).borrow();
-        write!(f, "<({}, {}), ({}, {})>", p1.x, p1.y, p2.x, p2.y)
+        let p1 = &self.p1;
+        let p2 = &self.p2;
+        write!(f, "Line(({}, {}), ({}, {}))", p1.x, p1.y, p2.x, p2.y)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn nfl() {
+		let line = Line::from_nfl(String::from("L00017=LINE/1,1,2,2").as_str());
+
+        assert_eq!(line.p1, Point2D::new(1.,1.));
+        assert_eq!(line.p2, Point2D::new(2.,2.));
+
+        assert_eq!(line.to_nfl(101), String::from("L00101=LINE/1,1,2,2"));
+    }
+
+    #[test]
+    fn contains() {
+		let l = Line::new(0., 0., 2., 2.);
+
+        assert!(l.contains(&Point2D::new(0., 0.), 0.00001));
+        assert!(l.contains(&Point2D::new(1., 1.), 0.00001));
+        assert!(l.contains(&Point2D::new(2., 2.), 0.00001));
+
+        assert!(!l.contains(&Point2D::new(0., 2.), 0.00001));
+        assert!(!l.contains(&Point2D::new(2., 0.), 0.00001));
+        assert!(l.contains(&Point2D::new(0., 2.), 1.5));
+
     }
 }

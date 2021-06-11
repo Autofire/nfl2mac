@@ -37,8 +37,13 @@ impl Part {
 	/// This data does not need to be processed before hand, just each
 	/// line should be separate, as it was in the file.
 	pub fn new(level: u64, data: Vec<String>) -> Part {
-		
-		//let test_line = Line::new(String::from("\"L00017=LINE/0.7577722283114,-0.4375,0.7577722283114,0.4375\","));
+
+        /*
+		let test = Line::new(String::from("L00017=LINE/1,1,2,2,").as_str());
+        println!("{}", test.contains(&Point2D::new(10.0, 10.0), 0.0001));
+        println!("{}", test.contains(&Point2D::new(10.0, 9.0), 0.0001));
+        println!("{}", test.contains(&Point2D::new(2.1, 2.1), 0.0001));
+        */
 		//println!("{:?}", test_line);
 		
 		let mut result = Part{
@@ -70,7 +75,7 @@ impl Part {
 			}
 			
 			if line.contains(line_tag) {
-				result.lines.push(Line::new(line.as_str()));
+				result.lines.push(Line::from_nfl(line.as_str()));
 			}
 			else if line.contains(circle_tag) {
 				result.arcs.push(Arc::new(line.as_str()));
@@ -87,22 +92,12 @@ impl Part {
 			i += 1;
 		}
 
-        // Next, we'll want to merge all line points that overlap.
-        for i in 0..result.lines.len() {
-            let (head, tail) = result.lines.split_at_mut(i+1);
-            let l1 = &mut head[head.len()-1];
-            for l2 in tail {
-                // TODO Get this value from config
-                Line::merge_points(l1, l2, 0.001);
-            }
-        }
-
         debug!("Finished part {}", result.level);
 
 		result
 	}
 
-    pub fn resolve_overlaps(a: &mut Part, b: &mut Part) {
+    pub fn resolve_overlaps(a: &mut Part, b: &mut Part, max_dist: f64) {
         info!("Resolving parts {} and {}", a.level, b.level);
 
         // So the problem is that we need to replace lines... but we
@@ -118,6 +113,9 @@ impl Part {
         // When splits occur, we want to create points at average positions
         // between the overlapping areas. The new segments will share endpoints
         // between parts.
+        //  EDIT: THIS IS WRONG! We are not moving points; just create new lines.
+        //        Looks like we should be able to get away with a tolerance of near
+        //        zero; things will just be relaly close and that should be good?
         // 
         // Note that we CANNOT destroy the endpoint!
         let _a_splits: HashMap<usize, Vec<Point2D<f64, f64>>> = HashMap::new();
@@ -127,13 +125,12 @@ impl Part {
             for j in 0..b.lines.len() {
                 
                 if let Some(overlaps)
-                    = Line::find_overlaps(&a.lines[i], &b.lines[j], 0.01)
+                    = Line::find_overlaps(&a.lines[i], &b.lines[j], max_dist)
                 {
-                    info!("a:  {:?}", a);
-                    info!("b:  {:?}", b);
-                    info!("o0: {:?}", overlaps.0);
-                    info!("o1: {:?}", overlaps.1);
-                    info!("");
+                    //info!("a:  {:?}", a);
+                    //info!("b:  {:?}", b);
+                    trace!("Found overlap in lines:\n{}\n{}\no: {:?}",
+                           a.lines[i], b.lines[j], overlaps);
                 }
                 
             }

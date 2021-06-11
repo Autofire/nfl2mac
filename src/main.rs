@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     match conf.target_type.clone().expect("Failed to deduce input type") {
         FileType::RawNFL => {
             info!("Raw file... will split and store in {:?}", conf.split_dest());	
-            asm.split();
+            asm.split(conf.line_precision);
             debug!("After split:\n{}", asm.to_nfl());
             fs::write(conf.split_dest(), asm.to_nfl())?;
         },
@@ -57,6 +57,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             println!("Already split... not splitting");
         },
     }
-    
+
     Ok(())
 }

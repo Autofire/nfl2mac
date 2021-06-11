@@ -58,6 +58,12 @@ pub struct Config {
     #[structopt(long)]
 	pub target_type: Option<FileType>,
 
+    /// Precision used when checking for overlaps in lines
+    ///
+    /// In the future, this may be auto-detected based on the part.
+    /// Making this negative will cause lines to not be broken up.
+    #[structopt(short, long, default_value = "0.000001")]
+    pub line_precision: f64
 }
 
 impl Config {
