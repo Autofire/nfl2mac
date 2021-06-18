@@ -70,19 +70,32 @@ impl Arc {
 	}
 
 	pub fn to_nfl(&self, id: u64) -> String {
-		let mut result = format!("C{:0>5}=CIRCLE/CENTER,{},{},RADIUS,{}",
-			id, self.center.x, self.center.y, self.radius
-		);
-		
-		
-		if self.go_angle != DEFAULT_GO_ANGLE {
-			result += &format!(",GOANG,{}", self.go_angle);
-		}
-		
-		if self.end_angle != DEFAULT_END_ANGLE {
-			result += &format!(",ENDANG,{}", self.end_angle);
-		}
+
+        let delim = ",";
+        let line_break = "$\n";
+        let line_break_post = "              ";
+        let max_line_len = 79;
+
+        // All lines have this, and they'll probably be on the same line.
+		let mut result = format!("C{:0>5}=CIRCLE/CENTER,{},{},RADIUS,{}", id, self.center.x, self.center.y, self.radius);
+
+        let mut parts = Vec::new();
+		if self.go_angle  != DEFAULT_GO_ANGLE  { parts.push(format!("GOANG,{}", self.go_angle)); }
+		if self.end_angle != DEFAULT_END_ANGLE { parts.push(format!("ENDANG,{}", self.end_angle)); }
+
+        if parts.len() > 0 {
+            let angle_part = parts.join(delim);
+
+            result.push_str(delim);
+            if result.len() + angle_part.len() + line_break.len() + delim.len() >= max_line_len {
+                result.push_str(line_break);
+                result.push_str(line_break_post);
+            }
+
+            result.push_str(&angle_part);
+        }
 		
 		result
 	}
 }
+
