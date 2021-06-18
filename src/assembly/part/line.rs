@@ -16,6 +16,7 @@
 use regex::Regex;
 use std::fmt;
 use std::ops::{Index, IndexMut};
+//use std::cmp::Ordering;
 //use log::*;
 use euclid::{Point2D, Vector2D};
 
@@ -31,6 +32,10 @@ impl Line {
 	
     pub fn new(x1: f64, y1: f64, x2: f64, y2: f64) -> Line {
         Line{ p1: Point2D::new(x1, y1), p2: Point2D::new(x2, y2) }
+    }
+
+    pub fn from_points(p1: Point2D<f64, f64>, p2: Point2D<f64, f64>) -> Line {
+        Line{ p1, p2 }
     }
 
 	pub fn from_nfl(data: &str) -> Line {
@@ -114,13 +119,20 @@ impl Line {
             // Now this distance from our desired point to BOTH endpoints must
             // be less than the distance between the endpoints themselves.
             // Only THEN can our point be on the line!
-            return
-                (*point - self.p1).square_length() < l*l &&
-                (*point - self.p2).square_length() < l*l;
+            // 
+            // There are some cases where a point that perfectly matches
+            // another one is excluded because it is deemed too far from the
+            // other point. Checking against 0 fixes this, though we should probably
+            // do an approximately equals?
+            
+            let p1_len = (*point - self.p1).square_length();
+            let p2_len = (*point - self.p2).square_length();
+            return (p1_len < l*l && p2_len < l*l) || p1_len == 0. || p2_len == 0.;
         }
     }
 
     /// Checks if a line contains the given point, excluding the line's endpoints.
+    #[allow(dead_code)] // Rust won't stop complaining about this
     pub fn contains(&self, point: &Point2D<f64, f64>, max_dist: f64) -> bool {
 
         let dist_sqr = max_dist * max_dist;
@@ -131,6 +143,48 @@ impl Line {
         
     }
 
+    /// Using the endpoints of the given line, constructs a new set of lines
+    /// that passes through the given set of points.
+    ///
+    /// Note that this will not respect the order of the points given;
+    /// the assumption is that we are trying to break a line up the line
+    /// based on the given points, which should be reasonably close to the line.
+    /// Thus, points that are too close to the current line's endpoints are ignored.
+    pub fn split(&self, mut points: Vec<Point2D<f64,f64>>, _max_dist: f64) -> Vec<Line> {
+        points.push(self.p1);
+        points.push(self.p2);
+
+        let v = self.to_vector();
+        if v.x.abs() > v.y.abs() {
+            // Line is horizontal; we should see a bigger difference in
+            // x values, so those should be less likely to be equal.
+            points.sort_by(|a, b| { a.x.partial_cmp(&b.x).unwrap() })
+        }
+        else {
+            points.sort_by(|a, b| { a.y.partial_cmp(&b.y).unwrap() })
+        }
+
+
+        // Delete duplicates. Yes, we are looking for perfect matches.
+        let mut i = 1;
+        while i < points.len() {
+            if points[i-1] == points[i] {
+                points.remove(i);
+            }
+            else {
+                i+=1;
+            }
+        }
+
+        i = 1;
+        let mut result: Vec<Line> = Vec::new();
+        while i < points.len() {
+            result.push(Line::from_points(points[i-1], points[i]));
+            i+=1;
+        }
+
+        result
+    }
 
     /// Converts the line to a vector without the positional data.
     /// 
@@ -226,5 +280,13 @@ mod tests {
         assert!(!l.overlaps(&Point2D::new(0., 2.), 0.00001));
         assert!(!l.overlaps(&Point2D::new(2., 0.), 0.00001));
         assert!(l.overlaps(&Point2D::new(0., 2.), 1.5));
+    }
+
+    #[test]
+    fn find_overlaps() {
+        let l1 = Line::new(0.7577722283114, 0.4375, 1.0798533496234, 0.2515463779096);
+        let l2 = Line::new(0.7577722283114, 0.4375, 1.5155444566228, 0.);
+
+        assert!(Line::find_overlaps(&l1, &l2, 0.000001).is_some());
     }
 }

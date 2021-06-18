@@ -132,7 +132,7 @@ impl Part {
                 if let Some(overlaps)
                     = Line::find_overlaps(&a.lines[i], &b.lines[j], max_dist)
                 {
-                    trace!("Found overlap in lines:\n{}\n{}\no: {:?}",
+                    trace!("Found overlap in lines:\na: {}\nb: {}\no: {:?}",
                            a.lines[i], b.lines[j], overlaps);
 
                     add_split(&mut a_splits, i, &overlaps);
@@ -143,18 +143,24 @@ impl Part {
         }
 
 
-        let perform_splits = |lines: &mut Vec<Line>, splits: &mut HashMap<usize, Vec<Point2D<f64,f64>>>| {
-            for (i, points) in splits {
-                for point in points {
-                    if lines[*i].contains(point, max_dist) {
-                        trace!("Splitting\n{}\nat {:?}", lines[*i], point);
-                    }
-                }
+        let perform_splits = |lines: &mut Vec<Line>, splits: HashMap<usize, Vec<Point2D<f64,f64>>>, name: &str| {
+            for (i, points) in splits.into_iter() {
+
+                let mut new_lines = lines[i].split(points, max_dist);
+                trace!("{}: Breaking {:?} into \n{:#?}", name, lines[i], new_lines);
+
+                lines.append(&mut new_lines);
+
+                // We want to do use swap_remove because it preserves
+                // the indicies for the rest of the existing lines,
+                // which is important because that's how we track lines.
+                lines.swap_remove(i);
+
             }
         };
 
-        perform_splits(&mut a.lines, &mut a_splits);
-        perform_splits(&mut b.lines, &mut b_splits);
+        perform_splits(&mut a.lines, a_splits, "a");
+        perform_splits(&mut b.lines, b_splits, "b");
     }
 
 	pub fn to_nfl(&self, id: &mut u64) -> String {

@@ -44,7 +44,8 @@ pub struct Config {
     /// Makes output more verbose
     ///
     /// Adding extra v's (i.e. -vvv) increases verbosity, up to 4 times.
-    /// Stages of verbosity are "error", "warn", "info", "debug", and "trace"
+    /// Stages of verbosity are "error", "warn", "info", "debug", and "trace",
+    /// with "error" being the defualt.
     #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
     pub verbose: usize,
 
